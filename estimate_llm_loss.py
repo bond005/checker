@@ -112,17 +112,17 @@ def main():
                 err_msg = f'The input message sequence is incorrect! {input_messages}'
                 loss_calculation_logger.error(err_msg)
                 raise RuntimeError(err_msg)
-            if input_messages[-1]['user'] != 'system':
+            if input_messages[-1]['role'] != 'user':
                 err_msg = f'The input message sequence is incorrect! {input_messages}'
                 loss_calculation_logger.error(err_msg)
                 raise RuntimeError(err_msg)
             history = []
             if len(input_messages) > 2:
-                if (len(input_messages) - 1) % 2 != 0:
+                if (len(input_messages) % 2) != 0:
                     err_msg = f'The input message sequence is incorrect! {input_messages}'
                     loss_calculation_logger.error(err_msg)
                     raise RuntimeError(err_msg)
-                for idx in range((len(input_messages) - 1) // 2):
+                for idx in range((len(input_messages) - 2) // 2):
                     if input_messages[1 + idx * 2]['role'] != 'user':
                         err_msg = f'The input message sequence is incorrect! {input_messages}'
                         loss_calculation_logger.error(err_msg)
@@ -152,7 +152,7 @@ def main():
                     labels=torch.tensor([model_labels], dtype=torch.long).to(device),
                     return_dict=True
                 )
-            loss_value = float(res.loss.cpu().numpy()[0])
+            loss_value = float(res.loss.cpu().numpy())
             new_sample = {
                 'system': input_messages[0]['content'],
                 'query': input_messages[-1]['content'],
