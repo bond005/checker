@@ -17,7 +17,7 @@ RANDOM_SEED = 42
 loss_calculation_logger = logging.getLogger(__name__)
 
 
-def load_samples(fname: str) -> List[Tuple[List[Dict[str, str]], str]]:
+def load_samples(fname: str) -> List[Tuple[List[Dict[str, str]], str, List[Tuple[str, str]]]]:
     samples = []
     with codecs.open(fname, mode='r', encoding='utf-8', errors='ignore') as fp:
         curline = fp.readline()
@@ -45,7 +45,13 @@ def load_samples(fname: str) -> List[Tuple[List[Dict[str, str]], str]]:
                 new_input_message.append(
                     {'role': 'user', 'content': user_prompt}
                 )
-                samples.append((new_input_message, true_answer))
+                additional_keys = set(new_sample.keys()) - {'system', 'query', 'history', 'response'}
+                additional_data = []
+                if len(additional_keys) > 0:
+                    for k in additional_keys:
+                        additional_data.append((k, new_sample[k]))
+                samples.append((new_input_message, true_answer, additional_data))
+                del additional_keys, additional_data
             curline = fp.readline()
     return samples
 
@@ -102,7 +108,7 @@ def main():
     ).to(device)
 
     with codecs.open(output_fname, mode='w', encoding='utf-8', errors='ignore') as fp:
-        for input_messages, true_target in tqdm(loaded_samples):
+        for input_messages, true_target, additional in tqdm(loaded_samples):
             if len(input_messages) < 2:
                 err_msg = (f'The input message sequence is too short! Expected 2 or greater, '
                            f'got {len(input_messages)}. {input_messages}')
@@ -158,11 +164,15 @@ def main():
                 'query': input_messages[-1]['content'],
                 'response': true_target,
                 'history': history,
-                f'{"_".join(os.path.basename(model_name).split())}_loss': loss_value
+                'loss': loss_value
             }
             del history
             del model_inputs, model_inputs_with_true_answer
             del model_labels
+            if len(additional) > 0:
+                for k, v in additional:
+                    if k not in new_sample:
+                        new_sample[k] = v
             fp.write(json.dumps(obj=new_sample, ensure_ascii=False) + '\n')
             del new_sample
 
